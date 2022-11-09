@@ -15,7 +15,7 @@ source $CONF_FILE
 # Build New "index.html" via Config Variable
 sudo cp $ORG_FILE $TMP_FILE
 sudo sed -i "s/__HEAD_TITLE__/$HEAD_TITLE/g" $TMP_FILE
-sudo sed -i "s/__BODY_MARKUP__/$BODY_MARKUP/g" $TMP_FILE
+sudo sed -i "s/__BODY_COMPANY__/$BODY_COMPANY/g" $TMP_FILE
 sudo sed -i "s/__BODY_VERSION__/$BODY_VERSION/g" $TMP_FILE
 sudo sed -i "s/__HOSTNAME__/$(hostname)/g" $TMP_FILE
 sudo mv $TMP_FILE $WWW_FILE
