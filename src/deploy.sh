@@ -10,7 +10,7 @@ WWW_FILE="/var/www/html/index.html"
 
 # Update Source Code && Load Config Variable
 cd $CICD_PATH && git pull
-source $CONF_FILE
+. $CONF_FILE
 
 # Build New "index.html" via Config Variable
 sudo cp $ORG_FILE $TMP_FILE
