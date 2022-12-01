@@ -1,0 +1,111 @@
+---
+project: vmk
+kind: PIPELINE
+name: IaaS CICD
+icon: organization,left, is-error
+enabled: true
+global: false
+concurrency: 10
+options: [
+  GIT_TRIGGER
+]
+input:
+  GIT_BRANCH_NAME: ''
+  GIT_CHANGE_SUBJECT: ''
+  GIT_COMMIT_ID: ''
+  GIT_EVENT_DESCRIPTION: ''
+  GIT_EVENT_OWNER_NAME: ''
+  GIT_EVENT_TIMESTAMP: ''
+  GIT_REPO_NAME: ''
+  GIT_SERVER_URL: ''
+_inputMeta:
+  GIT_SERVER_URL:
+    description: ''
+    mandatory: false
+  GIT_BRANCH_NAME:
+    description: ''
+    mandatory: false
+  GIT_COMMIT_ID:
+    description: ''
+    mandatory: true
+  GIT_EVENT_TIMESTAMP:
+    description: ''
+    mandatory: false
+  GIT_EVENT_DESCRIPTION:
+    description: ''
+    mandatory: false
+  GIT_REPO_NAME:
+    description: ''
+    mandatory: false
+  GIT_EVENT_OWNER_NAME:
+    description: ''
+    mandatory: false
+  GIT_CHANGE_SUBJECT:
+    description: ''
+    mandatory: false
+workspace:
+  type: DOCKER
+  endpoint: ''
+  image: ''
+  registry: ''
+  path: ''
+  autoCloneForTrigger: false
+  limits:
+    memory: 512
+    cpu: 1.0
+stageOrder:
+- Pipeline
+stages:
+  Pipeline:
+    taskOrder:
+    - Approval
+    - Variables
+    - Upgrade
+    tasks:
+      Variables:
+        type: SSH
+        input:
+          script: |-
+            # Git Pull
+            cd /opt/aap-iaas-cicd && git pull
+
+            # Get Node Count
+            . /opt/aap-iaas-cicd/src/deploy.conf
+            echo -n $NODE_COUNT > $SCRIPT_RESPONSE_FILE
+          username: ${var.CI_USERNAME}
+          password: ${var.CI_PASSWORD}
+          passphrase: ''
+          privatekey: ''
+          host: ${var.CI_HOSTNAME}
+          workingDirectory: ''
+          arguments: [
+            ]
+          environmentVariables: {
+            }
+          continueOnCommandFailure: false
+      Approval:
+        type: UserOperation
+        preCondition: ${requestBy} != "system"
+        input:
+          approvers:
+          - jangh
+          approverGroups: [
+            ]
+          summary: Pipeline Triggered by ${requestBy}
+          description: ''
+          sendemail: false
+          expiration: 3
+          expirationUnit: DAYS
+          pipelineName: ${name}
+          cancelPreviousPendingUserOp: false
+      Upgrade:
+        type: Blueprint
+        input:
+          action: UpdateDeployment
+          deploymentName: devops - cicd
+          allowDestroy: true
+          blueprint: DEVOPS - IAAS - CICD
+          version: '1'
+          parameters:
+            count: ${Pipeline.Variables.output.response}
+            configure: '. /home/devops/aap-iaas-cicd/src/deploy.sh # CommitID = ${input.GIT_COMMIT_ID}'

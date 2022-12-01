@@ -1,0 +1,95 @@
+formatVersion: 1
+inputs:
+  count:
+    type: number
+    title: VM Count
+    minimum: 1
+    maximum: 5
+    default: 1
+  configure:
+    type: string
+    title: App Configure Scripts
+    default: . /home/devops/aap-iaas-cicd/src/deploy.sh
+resources:
+  scripts:
+    type: Custom.Scripts
+    metadata:
+      layoutPosition:
+        - 0
+        - 1
+    properties:
+      osType: linux
+      password: VMware1!
+      username: devops
+      instances: ${resource.vm[*].id}
+      install: |
+        cd ~ && git clone https://github.com/HyechurnJang/aap-iaas-cicd.git
+      configure: ${input.configure}
+  lb:
+    type: Cloud.LoadBalancer
+    metadata:
+      layoutPosition:
+        - 1
+        - 0
+    properties:
+      routes:
+        - port: 80
+          protocol: HTTP
+          instancePort: 80
+          instanceProtocol: HTTP
+          healthCheckConfiguration:
+            port: 80
+            protocol: TCP
+            intervalSeconds: 5
+            timeoutSeconds: 5
+            healthyThreshold: 3
+            unhealthyThreshold: 3
+      network: ${resource.net.id}
+      instances: ${resource.vm[*].id}
+      address: 192.168.0.30
+      internetFacing: false
+  vm:
+    type: Cloud.Machine
+    metadata:
+      layoutPosition:
+        - 1
+        - 1
+    properties:
+      image: ubuntu20
+      flavor: medium
+      networks:
+        - network: ${resource.net.id}
+          assignment: static
+      constraints:
+        - tag: compute:vmw
+      placementPolicy: true
+      count: ${input.count}
+      cloudConfig: |
+        #cloud-config
+        users:
+          - name: devops
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            shell: /bin/bash
+            groups: [adm, sudo, wheel, users]
+            lock_passwd: false
+        chpasswd:
+          list: |
+            devops:VMware1!
+          expire: False
+        ssh_pwauth: true
+        package_update: true
+        package_upgrade: true
+        packages:
+         - apache2
+        runcmd:
+          - systemctl restart apache2
+  net:
+    type: Cloud.Network
+    metadata:
+      layoutPosition:
+        - 2
+        - 0
+    properties:
+      networkType: existing
+      constraints:
+        - tag: network:static
